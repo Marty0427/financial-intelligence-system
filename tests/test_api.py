@@ -73,6 +73,8 @@ class TestQueryEndpoint:
         assert "answer" in data
         assert "agents_used" in data
         assert "data_summary" in data
+        assert "processing_time_ms" in data
+        assert data["processing_time_ms"] >= 0
 
     @pytest.mark.asyncio
     async def test_query_validation_too_short(self, app_with_mocks):

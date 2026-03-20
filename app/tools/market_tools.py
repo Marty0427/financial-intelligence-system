@@ -44,6 +44,7 @@ def get_stock_quote(ticker: str) -> dict:
     Args:
         ticker: NYSE/NASDAQ ticker symbol, e.g. 'AAPL', 'MSFT', 'TSLA'.
     """
+    ticker = ticker.strip().upper()
     try:
         info = yf.Ticker(ticker).info
         return {
@@ -79,6 +80,7 @@ def get_financial_statements(ticker: str, period: str = "annual") -> dict:
         ticker: Stock ticker symbol.
         period: 'annual' (default) or 'quarterly'.
     """
+    ticker = ticker.strip().upper()
     try:
         stock = yf.Ticker(ticker)
         freq = "yearly" if period == "annual" else "quarterly"
@@ -123,6 +125,7 @@ def get_price_history(ticker: str, period: str = "6mo") -> dict:
         ticker: Stock ticker symbol.
         period: Lookback period — '1mo', '3mo', '6mo', '1y', '2y'.
     """
+    ticker = ticker.strip().upper()
     try:
         hist = yf.Ticker(ticker).history(period=period)
         if hist.empty:
@@ -160,6 +163,7 @@ def get_technical_indicators(ticker: str) -> dict:
     Args:
         ticker: Stock ticker symbol.
     """
+    ticker = ticker.strip().upper()
     if settings.alpha_vantage_api_key:
         return _av_technical_indicators(ticker)
     return _yf_technical_indicators(ticker)

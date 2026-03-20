@@ -46,13 +46,32 @@ class TestMarketTools:
 
     @patch("yfinance.Ticker")
     def test_get_stock_quote_error(self, mock_ticker):
-        mock_ticker.return_value.info = MagicMock(side_effect=Exception("Network error"))
-        # Should not raise — returns error dict
+        mock_ticker.side_effect = Exception("Network error")
         from app.tools.market_tools import get_stock_quote
-        # Patch the property access that fails
-        mock_ticker.return_value.info = {"currentPrice": None}
         result = get_stock_quote.invoke({"ticker": "FAKE"})
-        assert "ticker" in result
+        assert "error" in result
+        assert result["ticker"] == "FAKE"
+
+    @patch("yfinance.Ticker")
+    def test_get_stock_quote_normalizes_ticker(self, mock_ticker):
+        mock_ticker.return_value.info = {
+            "shortName": "Apple Inc.",
+            "currentPrice": 182.5,
+            "currency": "USD",
+        }
+        from app.tools.market_tools import get_stock_quote
+        result = get_stock_quote.invoke({"ticker": " aapl "})
+        assert result["ticker"] == "AAPL"
+
+    @patch("yfinance.Ticker")
+    def test_get_price_history_normalizes_ticker(self, mock_ticker):
+        import pandas as pd
+        dates = pd.date_range("2024-01-01", periods=10, freq="D")
+        hist = pd.DataFrame({"Close": [150.0 + i for i in range(10)], "Volume": [1_000_000] * 10}, index=dates)
+        mock_ticker.return_value.history.return_value = hist
+        from app.tools.market_tools import get_price_history
+        result = get_price_history.invoke({"ticker": " msft ", "period": "1mo"})
+        assert result["ticker"] == "MSFT"
 
     @patch("yfinance.Ticker")
     def test_get_price_history(self, mock_ticker):

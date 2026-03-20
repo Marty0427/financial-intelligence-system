@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import time
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -40,6 +41,7 @@ class QueryResponse(BaseModel):
     company: Optional[str] = None
     agents_used: list[str]
     data_summary: AgentDataSummary
+    processing_time_ms: float
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -62,11 +64,13 @@ async def run_query(
     state = initial_state(request.query)
     config = {"configurable": {"thread_id": request.thread_id or "default"}}
 
+    t0 = time.perf_counter()
     try:
         result = await graph.ainvoke(state, config=config)
     except Exception as exc:
         logger.error("Graph invocation failed: %s", exc)
         raise HTTPException(status_code=500, detail=f"Agent pipeline error: {exc}") from exc
+    elapsed_ms = round((time.perf_counter() - t0) * 1000, 2)
 
     return QueryResponse(
         query=request.query,
@@ -81,6 +85,7 @@ async def run_query(
             sentiment_available=result.get("sentiment") is not None,
             agent_errors=result.get("agent_errors", []),
         ),
+        processing_time_ms=elapsed_ms,
     )
 
 

@@ -75,9 +75,17 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         hits = [t for t in self._counts[ip] if t > window]
         hits.append(now)
+
+        # Evict stale IPs to prevent unbounded memory growth
+        if len(hits) == 1:
+            stale = [k for k, v in self._counts.items() if not any(t > window for t in v)]
+            for k in stale:
+                del self._counts[k]
+
         self._counts[ip] = hits
 
         if len(hits) > self.rpm:
+            retry_after = int(60 - (now - min(hits)))
             logger.warning("rate_limit_exceeded", ip=ip, count=len(hits))
             return JSONResponse(
                 status_code=429,
@@ -85,6 +93,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     "error": "Rate limit exceeded",
                     "detail": f"Maximum {self.rpm} requests per minute.",
                 },
+                headers={"Retry-After": str(max(retry_after, 1))},
             )
         return await call_next(request)
 
